@@ -66,12 +66,21 @@ fi
 
 TIME=$(( DAYS * 86400 ))
 
-TARGET=$(aws s3 cp $FILE s3://$BUCKET/ | sed -n -e 's/^.*\(s3:\/\/.*\)/\1/p')
+# Determine the region where the bucket resides, as we'll need this when
+# generating the pre-signed URL. (If we use the wrong region, the URL will
+# reply with a permanent redirect, but no redirect can actually be followed.)
+#
+# GetBucketLocation returns null for us-east-1 (N. Virginia). We need to
+# account for this.
+REGION=$(aws s3api get-bucket-location --bucket "$BUCKET" | jq -r '.LocationConstraint // "us-east-1"')
+echo "Bucket '$BUCKET' seems to be located in '$REGION'" >&2
+
+TARGET=$(aws s3 --region "$REGION" cp "$FILE" "s3://$BUCKET/" | sed -n -e 's/^.*\(s3:\/\/.*\)/\1/p')
 
 if [ -z $PROFILE ]; then
-	SIGNED_URL=$(aws s3 presign --expires-in $TIME $TARGET)
+	SIGNED_URL=$(aws --region "$REGION" s3 presign --expires-in "$TIME" "$TARGET")
 else
-	SIGNED_URL=$(aws --profile $PROFILE s3 presign --expires-in $TIME $TARGET)
+	SIGNED_URL=$(aws --region "$REGION" --profile "$PROFILE" s3 presign --expires-in "$TIME" "$TARGET")
 fi
 
-echo $SIGNED_URL
+echo "$SIGNED_URL"
