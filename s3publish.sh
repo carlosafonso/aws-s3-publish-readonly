@@ -41,12 +41,12 @@ while getopts "b:d:f:p:" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -z $BUCKET ]; then
+if [ -z "$BUCKET" ]; then
 	echo "Please provide the target bucket" >&2
 	exit 1
 fi
 
-if [ -z $FILE ]; then
+if [ -z "$FILE" ]; then
 	echo "Please provide the path to the file to be uploaded" >&2
 	exit 1
 fi
